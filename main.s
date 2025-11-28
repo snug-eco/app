@@ -179,6 +179,8 @@ lab args-done
     jsr heap/void
 
 lab idle-loop
+    s00 ;yield
+
     ; check process running
     ldv _pid
     s13 ;process active?
