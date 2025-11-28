@@ -177,6 +177,9 @@ lab args-done
     s11 ;process launch
     stv _pid
 
+    ;clean up
+    jsr heap/void
+    ldv _exec_name
     jsr heap/void
 
 lab idle-loop
