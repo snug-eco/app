@@ -62,7 +62,7 @@ lab loop
     ;check done 
     ldv _iter
     ldv _end
-    jsr quad/compare
+    s17 ; quad compare
     jcn done
 
     ; read out character
@@ -78,7 +78,7 @@ lab loop
 
     ; inc iter
     ldv _iter
-    jsr quad/inc
+    s16 ;quad/inc
 
     jmp loop
 
@@ -91,7 +91,8 @@ lab linefeed
     out
 
     ldv _iter
-    jsr quad/inc
+    ;jsr quad/inc
+    s16 ;quad/inc
     jmp loop
 
 
