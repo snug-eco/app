@@ -1,0 +1,39 @@
+<html>
+    <body>
+        <title>Snug Shell</title>
+    </body>
+    <head>
+        <h1>Snug Shell</h1>
+        <pre>
+The snug shell is the primary shell of the snug eco and operating system.
+It prompts the user for input, which it then parses by words.
+The first word is the name of the executable to run.
+Executables are given the prefix 'bin.' and then searched for in the file system.
+All trailing words are parameters, which are passed to the executable program
+through the 'args' file.
+        </pre>
+
+        <h3>Argument Format</h3>
+        <pre>
+Argument are written into the 'args' file as blocks in sequential order,
+prefix by a two byte header. The first byte is a flag 
+which indicates the status of the following block:
+    0x00 - End of argument stream
+    0x01 - Argument not read
+    0x02 - Argument read (ignore on search pass)
+The second byte contains the length of the following argument string.
+        </pre>
+
+        <h3>Argument Reading</h3>
+        <pre>
+When reading an argument from the 'args' file, 
+the reader walks over block, keeping track of the start of the next block.
+Whenever the start of a block is reached, it is either ignored if already read, or returned.
+Upon hitting the end of argument stream an error is returned, usually in the form of a null pointer.
+        </pre>
+    </head>
+</html>
+
+
+
+
