@@ -21,6 +21,7 @@ var _n
 var _file
 var _line
 var _tmp
+var _line_no
 
 
 lab main
@@ -47,7 +48,10 @@ lab main
     jcn file-not-exist-error
 
     ; open file
-    ldv _file
+    lit 4
+    jsr heap/new
+    dup
+    stv _file
     ldv _filename
     s05
     ldv _file
@@ -59,6 +63,8 @@ lab main
  
 lab loop
     ; prompt
+    lit 64
+    out
     ldv _cursor
     jsr string/from-int
     dup
@@ -107,10 +113,10 @@ lab loop
     ;jcn command-change
 
     ; enumerate
-    ;dup
-    ;lit 110 ;n
-    ;equ
-    ;jcn command-enum
+    dup
+    lit 110 ;n
+    equ
+    jcn command-enum
 
     ; print line
     ;dup
@@ -190,6 +196,75 @@ lab command-insert
     jsr disk/write
 
     jmp loop
+
+
+lab command-enum
+    lit 4
+    jsr heap/new
+    stv _tmp
+
+    ldv _tmp
+    ldv _file
+    lit 4
+    jsr mem/cpy
+
+    ; line number counter
+    lit 0
+    stv _line_no
+
+lab command-enum/line-loop
+    ;newline (hackyyyyy)
+    jsr string/newline
+
+    ; inc line number count
+    ldv _line_no
+    inc
+    dup
+    stv _line_no
+
+    ;print line no
+    jsr string/from-int
+    dup
+    jsr string/print
+    jsr heap/void
+    lit 32
+    out
+
+
+lab command-enum/char-loop
+    ldv _tmp
+    s02 ;sd_read
+
+    ;inc ptr
+    ldv _tmp
+    s16
+
+        ; null
+        dup
+        lit 0
+        equ
+        jcn command-enum/done
+
+        ; linefeed
+        dup
+        lit 10
+        equ
+        jcn command-enum/line-loop
+
+    out
+    jmp command-enum/char-loop
+
+lab command-enum/done
+    jsr string/newline
+
+    ldv _tmp
+    jsr heap/void
+
+    jmp loop
+
+
+
+    
 
 
 
