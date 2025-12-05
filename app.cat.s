@@ -18,9 +18,6 @@ lab main
     lit 4
     jsr heap/new
     stv _iter
-    lit 4
-    jsr heap/new
-    stv _end
 
     ; file name
     jsr args/get
@@ -44,32 +41,22 @@ lab main
     ldv _name
     s05 ; fs_seek
 
-    ; copy file header address
-    ldv _end
-    ldv _iter
-    lit 4
-    jsr mem/cpy
-
     ; open iterator
     ldv _iter
     s06 ; fs_open
 
-    ; get end of file
-    ldv _end
-    s07 ; fs_next
-
 lab loop
-    ;check done 
-    ldv _iter
-    ldv _end
-    s17 ; quad compare
-    jcn done
-
-    ; read out character
+    ; read char
     ldv _iter
     s02 ; sd_read
+
     dup
-    out
+        lit 0
+        equ
+        jcn done
+
+    dup
+        out
 
     ; scan for lf 
     lit 10
@@ -83,6 +70,7 @@ lab loop
     jmp loop
 
 lab done
+    pop
     ret
 
 lab linefeed
