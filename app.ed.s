@@ -22,7 +22,8 @@ var _file
 var _line
 var _tmp
 var _line_no
-
+var _file_end
+var _target_end
 
 lab main
     ; line buffer
@@ -164,43 +165,80 @@ lab command-insert
     inc ; linefeed
     stv _content_len
 
-    ldv _content_len 
-    dbg
+    ;insert newline into buffer
+    lit 10
+    ldv _content
+    ldv _content_len
+    add
+    sta
 
+    ; get end of file content
     ldv _line
-    jsr quad/print
+    jsr seek-file-content-end
+    stv _file_end
 
-
-    ; compute line target
-    ; meaning, the base address of the line after rcopy
+    ; compute target end
+    ; meaning, the end address of the file after rcopy
         lit 4
         jsr heap/new
-        stv _ptr
+        stv _target_end
 
         ;copy
-        ldv _ptr
-        ldv _line
+        ldv _target_end
+        ldv _file_end
         lit 4
         jsr mem/cpy
 
         ;advance by line length
-        ldv _ptr
+        ldv _target_end
         ldv _content_len
         s18
 
-    ldv _ptr
-    ldv _line
-        ;get remaining file content size
-        ldv _line
-        jsr disk/file-len
-    jsr disk/rcopy
+    ldv _file_end
+    jsr quad/print
+    ldv _target_end
+    jsr quad/print
+    brk
 
+    ; reverse copy _file_end ptr to _target_end ptr.
+    ; thus moving the file content after _line back by _content_len
+lab command-insert/rcopy
+    ; check bound
+    ldv _file_end
+    ldv _line
+    s17 ;quad/compare
+    jcn command-insert/rdone
+
+    ;copy
+    ldv _file_end
+    s02 ;sd_read
+
+    ldv _target_end
+    swp
+    s03
+
+    ;inc
+    ldv _file_end
+    s19
+    ldv _target_end
+    s19
+
+    jmp command-insert/rcopy
+lab command-insert/rdone
     
     ;insert content
     ldv _line
     ldv _content
     ldv _content_len
     jsr disk/write
+
+    ;clean up
+    ldv _line
+    jsr heap/void
+    ldv _file_end
+    jsr heap/void
+    ldv _target_end
+    jsr heap/void
 
     jmp loop
 
@@ -278,6 +316,42 @@ lab command-enum/done
     
 
 
+; --- routines ---
+
+; ( *ptr -- *end )
+; given pointer into file content,
+; seek end of (null terminated) content.
+; returned ptr points to null terminator!
+lab seek-file-content-end
+    lit 4
+    jsr heap/new
+    dup
+    stv _ptr
+    swp
+    lit 4
+    jsr mem/cpy
+
+lab seek-file-content-end/loop
+    ; bounds
+    ldv _ptr
+    s02
+    lit 0
+    equ
+    jcn seek-file-content-end/done
+
+    ;inc
+    ldv _ptr
+    s16
+
+    jmp seek-file-content-end/loop
+lab seek-file-content-end/done
+    ldv _ptr
+    ret
+    
+
+
+
+
 ; ( n -- *ptr )
 ; given the line number (zero indexed),
 ; returns a pointer to the base address of
@@ -302,9 +376,6 @@ lab seek-line/loop
     lit 1
     equ
     jcn seek-line/done
-
-    ldv _n
-    dbg
 
     ;next line
     ldv _ptr
