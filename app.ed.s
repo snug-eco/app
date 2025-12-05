@@ -170,6 +170,8 @@ lab command-insert
     ldv _content
     ldv _content_len
     add
+    lit 1
+    sub
     sta
 
     ; get end of file content
