@@ -164,6 +164,13 @@ lab command-insert
     inc ; linefeed
     stv _content_len
 
+    ldv _content_len 
+    dbg
+
+    ldv _line
+    jsr quad/print
+
+
     ; compute line target
     ; meaning, the base address of the line after rcopy
         lit 4
@@ -276,8 +283,6 @@ lab command-enum/done
 ; returns a pointer to the base address of
 ; the line in the _file with that number.
 lab seek-line
-    stv _n
-
     ; ptr
     lit 4
     jsr heap/new
@@ -289,12 +294,17 @@ lab seek-line
     lit 4
     jsr mem/cpy
 
+    stv _n
+
 lab seek-line/loop
     ; check countdown
     ldv _n
     lit 1
     equ
     jcn seek-line/done
+
+    ldv _n
+    dbg
 
     ;next line
     ldv _ptr
