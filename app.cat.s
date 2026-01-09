@@ -39,7 +39,7 @@ lab loop
     ldv _iter
         inc
         stv _iter
-    jsr sys/file/read
+    jsr sys/disk/read
 
     dup
         not
@@ -69,7 +69,7 @@ lab linefeed
 
 lab file-not-exist-error
     lit 100
-    jsr heap/new
+    jsr sys/heap/alloc
     dup
     str "cat error: no such file "
     jsr string/print
