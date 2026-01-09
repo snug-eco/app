@@ -1,26 +1,25 @@
 jmp main
 
-var _file
-var _name
+var _buffer
 
+use lib.sys.s
+use lib.mem.s
 use lib.string.s
 
 lab main
     ; message
-    lit 0
+    lit 100
+    jsr sys/heap/alloc
+    stv _buffer
+
+    ldv _buffer
     str "[INIT] Initializing root processes... "
-    lit 0
+    ldv _buffer
     jsr string/print
     jsr string/newline
 
-    ; manual memory
-    lit 0
-    stv _file
-    lit 4
-    stv _name
-
 lab register
-    ldv _name
+    ldv _buffer
     str "bin.shell"
     jsr init
 
@@ -31,23 +30,20 @@ lab register
 
 
 lab init
-    ldv _name
+    ldv _buffer
     jsr string/print
     jsr string/newline
 
-    ldv _name
-    s04 ; fs_check
-    lit 0
-    equ
-    jcn init-done
+    ldv _buffer
+    jsr sys/file/check
+    jcn init-good
+    ret
 
-    ldv _file
-    ldv _name
-    s05 ; fs_seek
+lab init-good
+    ldv _buffer
+    jsr sys/file/seek
 
-    ldv _file
-    s11 ; vm_launch
-lab init-done
+    jsr sys/proc/launch
     ret
 
 
