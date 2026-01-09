@@ -2,9 +2,8 @@ jsr main
 brk
 
 
-use lib.quad.s
+use lib.sys.s
 use lib.mem.s
-use lib.heap.s
 use lib.string.s
 use lib.line.s
 
@@ -18,9 +17,10 @@ var _pid
 
 
 lab args-not-exist-error
-    lit 0
+    lit 100
+    jsr sys/heap/alloc
+    dup
     str "[PANIC] shell error: args file does not exist."
-    lit 0
     jsr string/print
     jsr string/newline
     brk
@@ -29,7 +29,7 @@ lab args-not-exist-error
 lab main
     ;line buffer
     lit 128
-    jsr heap/new
+    jsr sys/heap/alloc
     stv _buffer
 
     ; print startup message
@@ -45,33 +45,21 @@ lab main
     str "args"
     
     ldv _buffer
-    s04
-    lit 0
-    equ
+    jsr sys/file/check
+    not
     jcn args-not-exist-error
 
-    lit 4
-    jsr heap/new
-    stv _file
 
-    ldv _file
     ldv _buffer
-    s05 ;seek file
-
-    ldv _file
-    s06 ;open file iterator
-
-    lit 4
-    jsr heap/new
-    stv _iter
+    jsr sys/file/seek
+    jsr sys/file/open
+    stv _file
 
 
 lab loop
     ; reset args iterator
-    ldv _iter
     ldv _file
-    lit 4
-    jsr mem/cpy
+    stv _iter
 
     ; prompt
     lit 62
@@ -86,14 +74,15 @@ lab loop
 
     ; parse exec
     ldv _buffer
-    lit 32
+    lit 32 ;space
     jsr string/token
     dup
     stv _exec
+    ; check exec is valid
     lda
     lit 0 
     equ
-    jcn loop
+    jcn loop ;if not, restart
 
 lab args-loop
     ; tokenize next arg and bounds check
@@ -108,18 +97,20 @@ lab args-loop
 
     ;flag
     ldv _iter
-    lit 1
-    s03 ;disk write
-    ldv _iter
-    jsr quad/inc
+        dup
+        inc
+        stv _iter
+    lit 1 ; arg present
+    jsr sys/disk/write
 
     ; length prefix
     ldv _iter
+        dup
+        inc
+        stv _iter
     ldv _argument
     jsr string/len
-    s03 ;disk write
-    ldv _iter
-    jsr quad/inc
+    jsr sys/disk/write
 
 lab arg-write-loop
     ;check
@@ -129,87 +120,80 @@ lab arg-write-loop
     equ
     jcn args-loop
 
+    ; write into file and inc both
     ldv _iter
+        dup
+        inc
+        stv _iter
     ldv _argument
+        dup
+        inc
+        stv _argument
     lda
-    s03 ;disk write
+    jsr sys/disk/write
     
-    ldv _iter
-    s16 ;quad/inc
-
-    ldv _argument
-    inc
-    stv _argument
     jmp arg-write-loop
 
 
 lab args-done
-    pop ;token walker
+    ;BUG MAYBE????
+    ;pop ;token walker
 
     ; write args file terminator
     ldv _iter
     lit 0
-    s03 ;disk write
+    jsr sys/disk/write
 
     ; render exec file
     ldv _exec
     jsr string/len
     lit 5 ; +1 termi +4 name
     add
-    jsr heap/new
+    jsr sys/heap/alloc
     stv _exec_name
     
+    ;write prefix
     ldv _exec_name
     str "bin."
 
+    ;write name
     ldv _exec_name
     lit 4
     add
     ldv _exec
-    ldv _exec
-    jsr string/len
-    inc ;termi
+        ldv _exec
+        jsr string/len
+        inc ;termi
     jsr mem/cpy
 
     ; check exec file exists
     ldv _exec_name
-    s04
-    lit 0
-    equ
+    jsr sys/file/check
+    not
     jcn exec-not-found
 
     ; launch process
-    lit 4
-    jsr heap/new
-
-    dup
     ldv _exec_name
-    s05 ;file seek
-
-
-    dup
-    s11 ;process launch
+    jsr sys/file/seek
+    jsr sys/proc/launch
     stv _pid
 
     ;clean up
-    jsr heap/void
     ldv _exec_name
-    jsr heap/void
+    jsr sys/heap/free
 
 lab idle-loop
-    s00 ;yield
+    jsr sys/yield
 
     ; check process running
     ldv _pid
-    s13 ;process active?
-    lit 0
-    equ
+    jsr sys/proc/check
+    not
     jcn loop
 
     ; check term in avail
-    s14
-    lit 0
-    equ
+    jsr sys/io/recv-ready
+    not
     jcn idle-loop
 
     ; monitor term in
@@ -222,7 +206,7 @@ lab idle-loop
 
 lab kill
     ldv _pid
-    s12
+    jsr sys/proc/kill
     jmp idle-loop
 
 
@@ -237,7 +221,7 @@ lab exec-not-found
     jsr string/newline
 
     ldv _exec_name
-    jsr heap/void
+    jsr sys/heap/free
     jmp loop
 
 
