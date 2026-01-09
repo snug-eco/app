@@ -2,9 +2,8 @@ jsr main
 brk
 
 
+use lib.sys.s
 use lib.mem.s
-use lib.quad.s
-use lib.heap.s
 use lib.string.s
 use lib.args.s
 
@@ -16,8 +15,7 @@ lab loop
 
     ; check null ptr
     dup
-    lit 0
-    equ
+    not
     jcn done
 
     ; print
@@ -27,7 +25,7 @@ lab loop
     out
 
     ; clean up
-    jsr heap/void
+    jsr sys/heap/free
 
     jmp loop
 
