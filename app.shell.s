@@ -158,10 +158,10 @@ lab args-done
 
     ;write name
     ldv _exec_name
-    lit 4
-    add
+        lit 4
+        add
     ldv _exec
-        ldv _exec
+    ldv _exec
         jsr string/len
         inc ;termi
     jsr mem/cpy
