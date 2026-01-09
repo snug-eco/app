@@ -37,6 +37,7 @@ lab main
 lab loop
     ; read char
     ldv _iter
+        dup
         inc
         stv _iter
     jsr sys/disk/read
