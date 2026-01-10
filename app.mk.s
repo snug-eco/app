@@ -2,9 +2,8 @@ jsr main
 brk
 
 
-use lib.quad.s
+use lib.sys.s
 use lib.mem.s
-use lib.heap.s
 use lib.string.s
 use lib.args.s
 
@@ -21,14 +20,12 @@ lab main
 
     ; check name given
     ldv _name
-    lit 0
-    equ
+    not
     jcn usage
 
     ; check size given
     ldv _size_str
-    lit 0
-    equ
+    not
     jcn usage
 
     ;convert
@@ -37,15 +34,16 @@ lab main
     stv _size_int
 
 
-    lit 4  
-    jsr heap/new
-    
-    dup
     ldv _name
     ldv _size_int
-    s08 ; fs_create
+    jsr sys/file/create
+    
+    jsr string/from-int
+    dup
+    jsr string/print
+    jsr string/newline
+    jsr sys/heap/free
 
-    jsr heap/void
     brk
 
 
