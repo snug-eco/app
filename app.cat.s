@@ -7,9 +7,11 @@ use lib.mem.s
 use lib.string.s
 use lib.args.s
 
+var _name
+
 var _iter
 var _end
-var _name
+var _size
 
 
 lab main
@@ -28,23 +30,35 @@ lab main
     not
     jcn file-not-exist-error
 
-    ; seek file
+    ; open file and stat size
     ldv _name
     jsr sys/file/seek
+    dup
+    jsr sys/file/size
+        stv _size
     jsr sys/file/open
-    stv _iter
+        stv _iter
+
+    ; compute end of file
+    ldv _size
+    ldv _iter
+    add
+    stv _end
+
 
 lab loop
+    ; exit
+    ldv _iter
+    ldv _end
+    equ
+    jcn done
+
     ; read char
     ldv _iter
         dup
         inc
         stv _iter
     jsr sys/disk/read
-
-    dup
-        not
-        jcn done
 
     dup
         out
@@ -56,8 +70,8 @@ lab loop
 
     jmp loop
 
+
 lab done
-    pop
     ret
 
 lab linefeed
