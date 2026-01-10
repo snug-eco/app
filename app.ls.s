@@ -1,9 +1,8 @@
 jsr main
 brk
 
+use lib.sys.s
 use lib.mem.s
-use lib.quad.s
-use lib.heap.s
 use lib.string.s
 
 var _iter
@@ -11,29 +10,25 @@ var _file
 
 
 lab main
-    lit 4    
-    jsr heap/new
+    lit 0
     stv _iter
-    lit 4    
-    jsr heap/new
-    stv _file
 
 
 lab loop
     ; copy iter to file
-    ldv _file
     ldv _iter
-    lit 4
-    jsr mem/cpy
+    stv _file
 
     ; check flag
     ldv _file
-    s02 ; disk read
+        dup ;preinc file ptr to skip flag byte
+        inc
+        stv _file
+    jsr sys/disk/read
      
     ; end of file block stream
     dup
-    lit 0
-    equ
+    not
     jcn done
 
     ; invalid file
@@ -41,27 +36,21 @@ lab loop
     neq
     jcn next-file
 
-    ; skip flag
-    ldv _file
-    jsr quad/inc
-
 lab print-name-loop
     ; read name char
     ldv _file
-    s02 ; disk read
+        dup
+        inc
+        stv _file
+    jsr sys/disk/read
 
     ; check termi
     dup
-    lit 0
-    equ 
+    not
     jcn print-name-done
 
     ; print
     out
-
-    ; inc ptr
-    ldv _file
-    s16 ; quad/inc
 
     ;again
     jmp print-name-loop
@@ -72,7 +61,8 @@ lab print-name-done
 
 lab next-file
     ldv _iter
-    s07 ; fs_next
+    jsr sys/file/next
+    stv _iter
 
     jmp loop
 
