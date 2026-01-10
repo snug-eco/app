@@ -48,9 +48,10 @@ lab main
 
 
 lab usage
-    lit 0
+    lit 100
+    jsr sys/heap/alloc
+    dup
     str "usage: mk filename size"
-    lit 0
     jsr string/print
     jsr string/newline
     brk
