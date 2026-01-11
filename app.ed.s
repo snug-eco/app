@@ -150,10 +150,14 @@ lab command-insert
     inc
     stv _cursor
 
+    lit 1 dbg
+
     ; grab line
     ldv _cursor
     jsr seek-line
     stv _line
+
+    lit 2 dbg
 
     ; compute content buffer
     ldv _buffer
@@ -166,6 +170,8 @@ lab command-insert
     jsr string/len
     inc ; linefeed
     stv _content_len
+
+    lit 3 dbg
 
     ;insert newline into buffer
     lit 10
@@ -181,12 +187,21 @@ lab command-insert
     jsr seek-file-content-end
     stv _file_end
 
+    lit 4 dbg
+
     ; compute target end
     ; meaning, the end address of the file after rcopy
     ldv _file_end
     ldv _content_len
     add
     stv _target_end
+
+    ldv _cursor dbg
+    ldv _line dbg
+    ldv _content_len dbg
+    ldv _file_end dbg
+    ldv _target_end dbg
+    brk
 
     ; reverse copy _file_end ptr to _target_end ptr.
     ; thus moving the file content after _line back by _content_len
@@ -406,6 +421,11 @@ lab seek-line
     ldv _file
     stv _ptr
 
+    ; line 0 sanity check
+    ldv _n
+    not
+    jcn seek-line/done
+
 lab seek-line/loop
     ; dec and check countdown
     ldv _n
@@ -414,6 +434,7 @@ lab seek-line/loop
         dup
         stv _n
 
+    not
     jcn seek-line/done
 
     ;next line
