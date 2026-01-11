@@ -131,6 +131,7 @@ lab loop-no-buffer-clear
 
 
 lab command-quit
+    jsr sys/flush-disk-cache
     brk
 
 lab command-goto
@@ -224,25 +225,29 @@ lab command-insert/rdone
     
     ; insert content into line
 lab command-insert/fcopy
-    ;copy
-    ldv _content
-        dup
-        inc
-        stv _content
-    lda
-    ldv _line
-        dup
-        inc
-        stv _line
-    jsr sys/disk/write
-
     ; check
     ldv _content_len
         dup
         lit 1
         sub
         stv _content_len
-    jcn command-insert/fcopy
+    not
+    jcn command-insert/fdone
+
+    ;copy
+    ldv _line ;addr
+        dup
+        inc
+        stv _line
+    ldv _content ;content
+        dup
+        inc
+        stv _content
+    lda
+    jsr sys/disk/write
+
+    jmp command-insert/fcopy
+lab command-insert/fdone
 
     ; setup buffer for another insertion
     jmp loop-no-buffer-clear
