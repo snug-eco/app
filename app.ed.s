@@ -137,7 +137,7 @@ lab command-goto
     ldv _buffer
     lit 2
     add
-    jsr string/to-int-thou
+    jsr string/to-int
     stv _cursor
 
     jmp loop
@@ -313,9 +313,12 @@ lab command-enum
     lit 0
     stv _line_no
 
+    lit 10
+    out
 lab command-enum/line-loop
-    ;newline (hackyyyyy)
-    jsr string/newline
+    ;cr (hackyyyyy)
+    lit 13
+    out
 
     ; inc line number count
     ldv _line_no
@@ -341,16 +344,19 @@ lab command-enum/char-loop
         not
         jcn command-enum/done
 
-        ; linefeed
+        ; output
         dup
+        out
+
+        ; linefeed
         lit 10
         equ
         jcn command-enum/line-loop
 
-    out
     jmp command-enum/char-loop
 
 lab command-enum/done
+    pop
     jsr string/newline
     jsr string/newline
 
