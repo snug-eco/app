@@ -2,13 +2,11 @@ jsr main
 brk
 
 
+use lib.sys.s
 use lib.mem.s
-use lib.quad.s
-use lib.heap.s
 use lib.string.s
 use lib.args.s
 use lib.line.s
-use lib.disk.s
 
 var _filename
 var _buffer
@@ -20,7 +18,6 @@ var _content_len
 var _n
 var _file
 var _line
-var _tmp
 var _line_no
 var _file_end
 var _target_end
@@ -28,7 +25,7 @@ var _target_end
 lab main
     ; line buffer
     lit 80
-    jsr heap/new
+    jsr sys/heap/alloc
     stv _buffer
 
     ; read file name argument
@@ -37,26 +34,20 @@ lab main
 
     ; check present
     ldv _filename
-    lit 0
-    equ
+    not
     jcn no-file-error
 
     ; check file
     ldv _filename
-    s04
-    lit 0
-    equ
+    jsr sys/file/check
+    not
     jcn file-not-exist-error
 
     ; open file
-    lit 4
-    jsr heap/new
-    dup
-    stv _file
     ldv _filename
-    s05
-    ldv _file
-    s06
+    jsr sys/file/seek
+    jsr sys/file/open
+    stv _file
 
     ; cursor
     lit 0
@@ -80,7 +71,7 @@ lab loop-no-buffer-clear
     lit 64
     out
     ldv _cursor
-    jsr string/print-int
+    jsr string/print-int-thou
     lit 32
     out
 
@@ -146,8 +137,9 @@ lab command-goto
     ldv _buffer
     lit 2
     add
-    jsr string/to-int
+    jsr string/to-int-thou
     stv _cursor
+
     jmp loop
 
 
@@ -191,60 +183,60 @@ lab command-insert
 
     ; compute target end
     ; meaning, the end address of the file after rcopy
-        lit 4
-        jsr heap/new
-        stv _target_end
-
-        ;copy
-        ldv _target_end
-        ldv _file_end
-        lit 4
-        jsr mem/cpy
-
-        ;advance by line length
-        ldv _target_end
-        ldv _content_len
-        s18
+    ldv _file_end
+    ldv _content_len
+    add
+    stv _target_end
 
     ; reverse copy _file_end ptr to _target_end ptr.
     ; thus moving the file content after _line back by _content_len
 lab command-insert/rcopy
     ;copy
-    ldv _file_end
-    s02 ;sd_read
-
     ldv _target_end
-    swp
-    s03
+        ldv _file_end
+        jsr sys/disk/read
+    jsr sys/disk/write
 
     ; check bound
     ldv _file_end
     ldv _line
-    s17 ;quad/compare
+    equ
     jcn command-insert/rdone
 
-    ;inc
+    ;dec
     ldv _file_end
-    s19
+        lit 1
+        sub
+        stv _file_end
     ldv _target_end
-    s19
+        lit 1
+        sub
+        stv _target_end
 
     jmp command-insert/rcopy
 lab command-insert/rdone
     
-    ;insert content
-    ldv _line
+    ; insert content into line
+lab command-insert/fcopy
+    ;copy
     ldv _content
-    ldv _content_len
-    jsr disk/write
-
-    ;clean up
+        dup
+        inc
+        stv _content
+    lda
     ldv _line
-    jsr heap/void
-    ldv _file_end
-    jsr heap/void
-    ldv _target_end
-    jsr heap/void
+        dup
+        inc
+        stv _line
+    jsr sys/disk/write
+
+    ; check
+    ldv _content_len
+        dup
+        lit 1
+        sub
+        stv _content_len
+    jcn command-insert/fcopy
 
     ; setup buffer for another insertion
     jmp loop-no-buffer-clear
@@ -271,44 +263,37 @@ lab command-delete
     stv _file_end
 
     ; origin address 
-    lit 4
-    jsr heap/new
-    dup
-    stv _ptr
     ldv _line
-    lit 4
-    jsr mem/cpy
+    stv _ptr
 
     ldv _ptr
     jsr next-line
+    stv _ptr
 
 
 lab command-delete/loop
     ; copy from _ptr to _line
-    ldv _ptr
-    s02
     ldv _line
-    swp
-    s03
+            dup
+            inc
+            stv _line
+        ldv _ptr
+            dup
+            inc
+            stv _ptr
+        jsr sys/disk/read
+    jsr sys/disk/write
 
     ; bounds.
     ; bounds check has to happen after copy,
     ; to ensure valid terminator.
     ldv _ptr
     ldv _file_end
-    s17
+    equ
     jcn command-delete/done
-
-    ; inc
-    ldv _ptr
-    s16
-    ldv _line
-    s16
 
     jmp command-delete/loop
 lab command-delete/done
-    ldv _ptr
-    jsr heap/void
     jmp loop
     
 
@@ -321,14 +306,8 @@ lab command-delete/done
 
 
 lab command-enum
-    lit 4
-    jsr heap/new
-    stv _tmp
-
-    ldv _tmp
     ldv _file
-    lit 4
-    jsr mem/cpy
+    stv _ptr
 
     ; line number counter
     lit 0
@@ -345,23 +324,21 @@ lab command-enum/line-loop
     stv _line_no
 
     ;print line no
-    jsr string/print-int
+    jsr string/print-int-thou
     lit 32
     out
 
 
 lab command-enum/char-loop
-    ldv _tmp
-    s02 ;sd_read
-
-    ;inc ptr
-    ldv _tmp
-    s16
+    ldv _ptr
+        dup
+        inc
+        stv _ptr
+    jsr sys/disk/read
 
         ; null
         dup
-        lit 0
-        equ
+        not
         jcn command-enum/done
 
         ; linefeed
@@ -376,10 +353,6 @@ lab command-enum/char-loop
 lab command-enum/done
     jsr string/newline
     jsr string/newline
-
-    ldv _tmp
-    jsr heap/void
-
 
     jmp loop
 
@@ -399,28 +372,17 @@ lab command-enum/done
 ; seek end of (null terminated) content.
 ; returned ptr points to null terminator!
 lab seek-file-content-end
-    lit 4
-    jsr heap/new
-    dup
     stv _ptr
-    swp
-    lit 4
-    jsr mem/cpy
 
 lab seek-file-content-end/loop
     ; bounds
     ldv _ptr
-    s02
-    lit 0
-    equ
-    jcn seek-file-content-end/done
+        dup
+        inc
+        stv _ptr
+    jsr sys/disk/read
+    jcn seek-file-content-end/loop
 
-    ;inc
-    ldv _ptr
-    s16
-
-    jmp seek-file-content-end/loop
-lab seek-file-content-end/done
     ldv _ptr
     ret
     
@@ -433,45 +395,36 @@ lab seek-file-content-end/done
 ; returns a pointer to the base address of
 ; the line in the _file with that number.
 lab seek-line
-    ; ptr
-    lit 4
-    jsr heap/new
-    stv _ptr
-
-    ; copy
-    ldv _ptr
-    ldv _file
-    lit 4
-    jsr mem/cpy
-
     stv _n
 
+    ldv _file
+    stv _ptr
+
 lab seek-line/loop
-    ; check countdown
+    ; dec and check countdown
     ldv _n
     lit 1
-    equ
+    sub
+        dup
+        stv _n
+
     jcn seek-line/done
 
     ;next line
     ldv _ptr
     jsr next-line
-
-    ; dec 
-    ldv _n
-    lit 1
-    sub
-    stv _n
+    stv _ptr
 
     jmp seek-line/loop
 lab seek-line/done
+
     ldv _ptr
     ret
 
     
 
 
-; ( *ptr -- )
+; ( ptr -- ptr )
 ; advances a pointer by one line in a file,
 ; assuming it points to the base address of the
 ; preceeding line.
@@ -481,21 +434,18 @@ lab next-line
 lab next-line/loop 
     ; check linefeed 
     ldv _ptr
-    s02
+        dup
+        inc
+        stv _ptr
+    jsr sys/disk/read
     lit 10 ;linefeed
     equ
     jcn next-line/done
-    
-    ; inc ptr
-    ldv _ptr
-    s16
 
     jmp next-line/loop
 lab next-line/done
 
-    ; inc ptr
     ldv _ptr
-    s16
     ret
     
 
@@ -523,15 +473,6 @@ lab no-file-error
     jsr string/print
     jsr string/newline
     brk
-
-
-
-
-
-
-
-
-
 
 
 
