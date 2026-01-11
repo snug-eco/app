@@ -44,6 +44,38 @@ lab init-good
     jsr sys/file/seek
 
     jsr sys/proc/launch
+
+    ;prefix and write pid
+    ldv _buffer
+    str "pid"
+    lit 46 ;fix dot
+        ldv _buffer
+        lit 3
+        add
+        sta
+
+
+    ldv _buffer
+    jsr sys/file/check
+    not
+    jcn init-skip-pid-rm
+        ldv _buffer ; remove old pid file
+        jsr sys/file/seek
+        jsr sys/file/delete
+    lab init-skip-pid-rm
+
+    ldv _buffer
+    jsr string/print
+    jsr string/newline
+
+    ldv _buffer
+    lit 1
+    jsr sys/file/create
+    jsr sys/file/open
+    swp
+    jsr sys/disk/write
+    jsr sys/flush-disk-cache
+
     ret
 
 
