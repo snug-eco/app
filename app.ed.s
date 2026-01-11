@@ -189,12 +189,6 @@ lab command-insert
     add
     stv _target_end
 
-    ldv _cursor dbg
-    ldv _line dbg
-    ldv _content_len dbg
-    ldv _file_end dbg
-    ldv _target_end dbg
-
     ; reverse copy _file_end ptr to _target_end ptr.
     ; thus moving the file content after _line back by _content_len
 lab command-insert/rcopy
