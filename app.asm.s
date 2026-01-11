@@ -1,13 +1,11 @@
 jsr main
 brk
 
+use lib.sys.s
 use lib.mem.s
-use lib.quad.s
-use lib.heap.s
 use lib.string.s
 use lib.args.s
 use lib.line.s
-use lib.disk.s
 
 
 var _filename
@@ -15,6 +13,7 @@ var _file
 var _addr
 var _tbuf
 var _ptr
+var _char
 
 lab main
     ; read file name argument
@@ -23,8 +22,7 @@ lab main
 
     ; check present
     ldv _filename
-    lit 0
-    equ
+    not
     jcn no-file-error
 
     ; init exploration address
@@ -33,23 +31,18 @@ lab main
 
     ; init token buffer
     lit 80
-    jsr heap/new
+    jsr sys/heap/alloc
     stv _tbuf
 
     ; debug open file
-    lit 4
-    jsr heap/new
-    dup
-    stv _file
     ldv _filename
-    s05
-    ldv _file
-    s06
+    jsr sys/file/seek
+    jsr sys/file/open
+    stv _file
 
 lab loop
     jsr token
-    lit 1
-    xor
+    not
     jcn done
 
     ldv _tbuf
@@ -100,13 +93,13 @@ lab is-space
 lab token
     ; skip white space
     ldv _file
-    s02 ;disk/read
+    jsr sys/disk/read
     jsr is-space
-    lit 1
-    xor
+    not
     jcn token/not-space
-    ldv _file    
-    s16 ;quad/inc
+        ldv _file
+        inc
+        stv _file
     jmp token
 
 lab token/not-space
@@ -115,22 +108,23 @@ lab token/not-space
     stv _ptr
 
     ldv _file
-    s02 ;disk/read
+    jsr sys/disk/read
+    stv _char
 
     ; terminator
-    dup
+    ldv _char
     lit 0
     equ
     jcn token/eof
 
     ; comment
-    dup
+    ldv _char
     lit 59
     equ
     jcn token/comment
 
     ; string
-    dup
+    ldv _char
     lit 34
     equ
     jcn token/string
@@ -138,19 +132,18 @@ lab token/not-space
     ; default
 lab token/default
     ldv _file
-    s02 ;disk/read
+        dup
+        inc
+        stv _file
+    jsr sys/disk/read
     dup
     jsr is-space
     jcn token/default-done
     ldv _ptr
+        dup
+        inc
+        stv _ptr
     sta
-
-    ;inc
-    ldv _ptr
-    inc
-    stv _ptr
-    ldv _file
-    s16
 
     jmp token/default
 lab token/default-done
@@ -164,10 +157,10 @@ lab token/eof
 
 lab token/comment
     ldv _file
-    s16 ;quad/inc
-
-    ldv _file
-    s02 ;disk/read
+    inc ;preinc
+        dup
+        stv _file
+    jsr sys/disk/read
     lit 10
     neq
     jcn token/comment
@@ -176,29 +169,29 @@ lab token/comment
 
 lab token/string
     ldv _file
-    s16 ;quad/inc
-
-    ldv _file
-    s02 ;disk/read
+    inc
+        dup
+        stv _file
+    jsr sys/disk/read
     dup
     lit 34
     equ
     jcn token/string-done
     ldv _ptr
+        dup
+        inc
+        stv _ptr 
     sta
-
-    ;inc
-    ldv _ptr
-    inc
-    stv _ptr
 
     jmp token/string
 
 lab token/string-done
     pop
 
+    ;skip quote
     ldv _file
-    s16 ;quad/inc
+    inc
+    stv _file
 
     jmp token/finalize 
 
@@ -231,14 +224,6 @@ lab explore
     jcn file-not-exist-error
 
     ;open file
-    lit 4
-    jsr heap/new
-    dup
-    stv _file
-    ldv _filename
-    s05
-    ldv _file
-    s06
 
 lab explore/loop
     jsr token
