@@ -33,26 +33,11 @@ lab main
     ; open file and stat size
     ldv _name
     jsr sys/file/seek
-    dup
-    jsr sys/file/size
-        stv _size
     jsr sys/file/open
-        stv _iter
-
-    ; compute end of file
-    ldv _size
-    ldv _iter
-    add
-    stv _end
+    stv _iter
 
 
 lab loop
-    ; exit
-    ldv _iter
-    ldv _end
-    equ
-    jcn done
-
     ; read char
     ldv _iter
         dup
@@ -60,7 +45,11 @@ lab loop
         stv _iter
     jsr sys/disk/read
 
-    dup
+    dup ;terminator
+        not 
+        jcn done
+
+    dup ;print
         out
 
     ; scan for lf 
