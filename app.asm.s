@@ -14,6 +14,20 @@ var _addr
 var _tbuf
 var _ptr
 var _char
+var _index
+var _mnem
+
+; table are constructed during exploration pass
+; and map a 32-bit hash of the identifier to
+; its program/memory address. two quad words per entry:
+;  p + 0 -> hash
+;  p + 1 -> address
+var _tabl_lab ;label table
+var _tabl_var ;var table
+
+; tabel[index * 2]
+var _tabl_lab_index
+var _tabl_var_index
 
 lab main
     ; read file name argument
@@ -34,32 +48,24 @@ lab main
     jsr sys/heap/alloc
     stv _tbuf
 
-    ; debug open file
+    ; mnemonic
+    lit 10 
+    jsr sys/heap/alloc
+    stv _mnem
+
+    ;tables
+    lit 400 ;200 entries
+    jsr sys/heap/alloc
+    stv _tabl_lab
+    lit 200 ;100 entries
+    jsr sys/heap/alloc
+    stv _tabl_var
+
+    ;explore file
     ldv _filename
-    jsr sys/file/seek
-    jsr sys/file/open
-    stv _file
+    jsr explore
 
-lab loop
-    jsr token
-    not
-    jcn done
-
-    ldv _tbuf
-    jsr string/print
-    jsr string/newline
-
-    jmp loop
-lab done
     brk
-
-    ;ldv _filename
-
-    ; explore file
-    ;ldv _filename
-    ;jsr explore
-
-    ;
 
 
 
@@ -110,6 +116,8 @@ lab token/not-space
     ldv _file
     jsr sys/disk/read
     stv _char
+
+
 
     ; terminator
     ldv _char
@@ -207,6 +215,46 @@ lab token/finalize
 
 
 
+; --
+; compute hash of token
+var _hash
+lab hash
+    lit 0
+    stv _hash
+    lit 0
+    stv _index
+
+lab hash/loop
+    ldv _tbuf
+    ldv _index
+        dup
+        inc
+        stv _index
+    add
+    lda
+
+    ;check termi
+    dup
+    not
+    jcn hash/done
+
+    ; hash = hash * 31 + char
+    ldv _hash
+    lit 5
+    shl
+    ldv _hash
+    add
+    add
+    stv _hash
+
+    jmp hash/loop
+
+lab hash/done
+    pop
+    ret
+
+
+    
 
 
 
@@ -218,15 +266,122 @@ lab explore
 
     ; check file
     ldv _filename
-    s04
-    lit 0
-    equ
+    jsr sys/file/check
+    not
     jcn file-not-exist-error
 
     ;open file
+    ldv _filename
+    jsr sys/file/seek
+    jsr sys/file/open
+    stv _file
 
 lab explore/loop
     jsr token
+
+    ldv _mnem str "brk" jsr explore/match jcn explore/zero
+    ldv _mnem str "inc" jsr explore/match jcn explore/zero
+    ldv _mnem str "pop" jsr explore/match jcn explore/zero
+    ldv _mnem str "swp" jsr explore/match jcn explore/zero
+    ldv _mnem str "dup" jsr explore/match jcn explore/zero
+    ldv _mnem str "lit" jsr explore/match jcn explore/one
+
+    ldv _mnem str "equ" jsr explore/match jcn explore/zero
+    ldv _mnem str "neq" jsr explore/match jcn explore/zero
+    ldv _mnem str "gth" jsr explore/match jcn explore/zero
+    ldv _mnem str "lth" jsr explore/match jcn explore/zero
+
+    ldv _mnem str "jmp" jsr explore/match jcn explore/jump
+    ldv _mnem str "jcn" jsr explore/match jcn explore/jump
+    ldv _mnem str "jsr" jsr explore/match jcn explore/jump
+    ldv _mnem str "ret" jsr explore/match jcn explore/zero
+
+    ldv _mnem str "ldv" jsr explore/match jcn explore/one
+    ldv _mnem str "stv" jsr explore/match jcn explore/one
+    ldv _mnem str "lda" jsr explore/match jcn explore/zero
+    ldv _mnem str "sta" jsr explore/match jcn explore/zero
+
+    ldv _mnem str "inp" jsr explore/match jcn explore/zero
+    ldv _mnem str "out" jsr explore/match jcn explore/zero
+
+    ldv _mnem str "add" jsr explore/match jcn explore/zero
+    ldv _mnem str "sub" jsr explore/match jcn explore/zero
+    ldv _mnem str "mul" jsr explore/match jcn explore/zero
+    ldv _mnem str "div" jsr explore/match jcn explore/zero
+    ldv _mnem str "and" jsr explore/match jcn explore/zero
+    ldv _mnem str "aor" jsr explore/match jcn explore/zero
+    ldv _mnem str "xor" jsr explore/match jcn explore/zero
+    ldv _mnem str "shl" jsr explore/match jcn explore/zero
+    ldv _mnem str "shr" jsr explore/match jcn explore/zero
+    ldv _mnem str "inv" jsr explore/match jcn explore/zero
+    ldv _mnem str "not" jsr explore/match jcn explore/zero
+
+    ldv _mnem str "dbg" jsr explore/match jcn explore/zero
+
+    ldv _mnem str "str" jsr explore/match jcn explore/str
+    ldv _mnem str "lab" jsr explore/match jcn explore/lab
+    ldv _mnem str "var" jsr explore/match jcn explore/var
+    ldv _mnem str "use" jsr explore/match jcn explore/use
+
+    ldv _tbuf
+    lda
+    lit 115 ; lowercase s (for system instruction)
+    equ
+    jcn explore/one
+
+    jmp explore/loop
+
+lab explore/zero
+    ldv _addr
+    inc ; instruction
+    stv _addr
+    jmp explore/loop
+lab explore/one
+    jsr token ;skip attribute token
+    ldv _addr
+    lit 2
+    add ; instruction and attribute
+    stv _addr
+    jmp explore/loop
+lab explore/jump
+    jsr token ;skip content token
+    ldv _addr
+    lit 3
+    add ; instruction and two-byte execution pointer 
+    stv _addr
+    jmp explore/loop
+
+lab explore/str
+    ldv _tbuf
+    jsr string/len
+    lit 2 ;+1 instruction +1 terminator
+    add
+    ldv _addr
+    add
+    stv _addr
+    jmp explore/loop
+
+lab explore/use
+    ldv _file ;save file pointer into outer file
+        ldv _tbuf
+        jsr explore
+    stv _file ;restore file pointer
+    jmp explore/loop
+
+lab explore/lab
+    
+
+
+    
+
+
+
+; match mnemonic again token
+lab explore/match
+    ldv _mnem
+    ldv _tbuf
+    jsr string/cmp
+    ret
 
 
 
