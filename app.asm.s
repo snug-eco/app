@@ -25,7 +25,7 @@ var _mnem
 var _tabl_lab ;label table
 var _tabl_var ;var table
 
-; tabel[index * 2]
+; table[index * 2]
 var _tabl_lab_index
 var _tabl_var_index
 
@@ -60,6 +60,11 @@ lab main
     lit 200 ;100 entries
     jsr sys/heap/alloc
     stv _tabl_var
+
+    lit 0
+    stv _tabl_lab_index
+    lit 0
+    stv _tabl_var_index
 
     ;explore file
     ldv _filename
@@ -369,7 +374,58 @@ lab explore/use
     jmp explore/loop
 
 lab explore/lab
+    ;compute identifier hash
+    jsr hash
     
+    ; p+0 <- hash
+    ldv _hash
+        ldv _tabl_lab_index
+            dup
+            inc
+            stv _tabl_lab_index
+        ldv _tabl_lab
+        add
+    sta
+
+    ; p+1 <- address
+    ldv _addr
+        ldv _tabl_lab_index
+            dup
+            inc
+            stv _tabl_lab_index
+        ldv _tabl_lab
+        add
+    sta
+
+    jmp explore/loop
+
+lab explore/var
+    ;compute identifier hash
+    jsr hash
+    
+    ; p+0 <- hash
+    ldv _hash
+        ldv _tabl_var_index
+            dup
+            inc
+            stv _tabl_var_index
+        ldv _tabl_var
+        add
+    sta
+
+    ; p+1 <- address
+    ldv _tabl_var_index
+        ldv _tabl_var_index
+            dup
+            inc
+            stv _tabl_var_index
+        ldv _tabl_var
+        add
+    sta
+
+    jmp explore/loop
+
+
 
 
     
