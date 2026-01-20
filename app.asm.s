@@ -283,6 +283,12 @@ lab explore
 
 lab explore/loop
     jsr token
+    not
+    jcn explore/done
+
+    ldv _tbuf
+    jsr string/print
+    jsr string/newline
 
     ldv _mnem str "brk" jsr explore/match jcn explore/zero
     ldv _mnem str "inc" jsr explore/match jcn explore/zero
@@ -332,7 +338,7 @@ lab explore/loop
     lda
     lit 115 ; lowercase s (for system instruction)
     equ
-    jcn explore/one
+    jcn explore/zero
 
     jmp explore/loop
 
@@ -342,14 +348,14 @@ lab explore/zero
     stv _addr
     jmp explore/loop
 lab explore/one
-    jsr token ;skip attribute token
+    jsr token pop ;skip attribute token
     ldv _addr
     lit 2
     add ; instruction and attribute
     stv _addr
     jmp explore/loop
 lab explore/jump
-    jsr token ;skip content token
+    jsr token pop ;skip content token
     ldv _addr
     lit 3
     add ; instruction and two-byte execution pointer 
@@ -357,6 +363,7 @@ lab explore/jump
     jmp explore/loop
 
 lab explore/str
+    jsr token pop ; skip iden
     ldv _tbuf
     jsr string/len
     lit 2 ;+1 instruction +1 terminator
@@ -367,6 +374,7 @@ lab explore/str
     jmp explore/loop
 
 lab explore/use
+    jsr token pop ; skip iden
     ldv _file ;save file pointer into outer file
         ldv _tbuf
         jsr explore
@@ -374,6 +382,7 @@ lab explore/use
     jmp explore/loop
 
 lab explore/lab
+    jsr token pop ; skip iden
     ;compute identifier hash
     jsr hash
     
@@ -397,9 +406,17 @@ lab explore/lab
         add
     sta
 
+    ldv _addr
+    dbg
+    ldv _tbuf
+    jsr string/print
+    jsr string/newline
+
+
     jmp explore/loop
 
 lab explore/var
+    jsr token pop ; skip iden
     ;compute identifier hash
     jsr hash
     
@@ -425,10 +442,8 @@ lab explore/var
 
     jmp explore/loop
 
-
-
-
-    
+lab explore/done 
+    ret
 
 
 
