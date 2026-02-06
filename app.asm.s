@@ -404,10 +404,8 @@ lab explore/str
 lab explore/use
     jsr token pop ; skip iden
     ldv _file ;save file pointer into outer file
-    dup dbg
         ldv _tbuf
         jsr explore
-    dup dbg
     stv _file ;restore file pointer
     jmp explore/loop
 
@@ -553,7 +551,7 @@ lab fput
     ret
 
 lab fjump
-    jsr token
+    jsr token pop
     jsr hash
     jsr lookup-label
     dup 
@@ -641,7 +639,7 @@ lab assemble/dup lit 4 jsr fput jmp assemble/loop
 lab assemble/lit 
     lit 5 jsr fput 
 
-    jsr token
+    jsr token pop
     ldv _tbuf
     jsr string/to-int
     jsr fput
@@ -658,8 +656,8 @@ lab assemble/jcn lit 11 jsr fput jsr fjump jmp assemble/loop
 lab assemble/jsr lit 12 jsr fput jsr fjump jmp assemble/loop
 lab assemble/ret lit 13 jsr fput jmp assemble/loop
  
-lab assemble/ldv lit 14 jsr fput  jsr token jsr hash jsr lookup-var jsr fput jmp assemble/loop
-lab assemble/stv lit 15 jsr fput  jsr token jsr hash jsr lookup-var jsr fput jmp assemble/loop
+lab assemble/ldv lit 14 jsr fput  jsr token pop jsr hash jsr lookup-var jsr fput jmp assemble/loop
+lab assemble/stv lit 15 jsr fput  jsr token pop jsr hash jsr lookup-var jsr fput jmp assemble/loop
 
 lab assemble/lda lit 16 jsr fput jmp assemble/loop
 lab assemble/sta lit 17 jsr fput jmp assemble/loop
@@ -682,7 +680,7 @@ lab assemble/not lit 30 jsr fput jmp assemble/loop
 
 lab assemble/str
     lit 31 jsr fput
-    jsr token
+    jsr token pop
     ldv _tbuf
     stv _index
 
@@ -704,8 +702,8 @@ lab assemble/dbg
     jsr fput
     jmp assemble/loop
 
-lab assemble/lab jsr token jmp assemble/loop
-lab assemble/var jsr token jmp assemble/loop
+lab assemble/lab jsr token pop jmp assemble/loop
+lab assemble/var jsr token pop jmp assemble/loop
 
 lab assemble/system
         ldv _tbuf
@@ -728,7 +726,7 @@ lab assemble/system
     jmp assemble/loop
 
 lab assemble/use
-    jsr token pop ; skip iden
+    jsr token pop
     ldv _file ;save file pointer into outer file
         ldv _tbuf
         jsr assemble
