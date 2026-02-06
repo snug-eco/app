@@ -9,7 +9,9 @@ use lib.line.s
 
 
 var _filename
+var _buildname
 var _file
+var _build
 var _addr
 var _tbuf
 var _ptr
@@ -34,10 +36,16 @@ lab main
     jsr args/get
     stv _filename
 
+    jsr args/get
+    stv _buildname
+
     ; check present
     ldv _filename
     not
     jcn no-file-error
+    ldv _buildname
+    not
+    jcn no-build-error
 
     ; init exploration address
     lit 0
@@ -66,9 +74,27 @@ lab main
     lit 0
     stv _tabl_var_index
 
-    ;explore file
     ldv _filename
-    jsr explore
+    dup
+        jsr explore
+
+    ; delete build file if exists
+    ldv _buildname
+    jsr sys/file/check
+    not
+    jcn skip-delete-build
+        ldv _buildname
+        jsr sys/file/seek
+        jsr sys/file/delete
+    lab skip-delete-build
+
+    ; generate new
+    ldv _buildname
+    ldv _addr
+    jsr sys/file/create
+    stv _build
+
+    jsr assemble
 
     brk
 
@@ -290,49 +316,49 @@ lab explore/loop
     jsr string/print
     jsr string/newline
 
-    ldv _mnem str "brk" jsr explore/match jcn explore/zero
-    ldv _mnem str "inc" jsr explore/match jcn explore/zero
-    ldv _mnem str "pop" jsr explore/match jcn explore/zero
-    ldv _mnem str "swp" jsr explore/match jcn explore/zero
-    ldv _mnem str "dup" jsr explore/match jcn explore/zero
-    ldv _mnem str "lit" jsr explore/match jcn explore/one
+    ldv _mnem str "brk" jsr match jcn explore/zero
+    ldv _mnem str "inc" jsr match jcn explore/zero
+    ldv _mnem str "pop" jsr match jcn explore/zero
+    ldv _mnem str "swp" jsr match jcn explore/zero
+    ldv _mnem str "dup" jsr match jcn explore/zero
+    ldv _mnem str "lit" jsr match jcn explore/one
 
-    ldv _mnem str "equ" jsr explore/match jcn explore/zero
-    ldv _mnem str "neq" jsr explore/match jcn explore/zero
-    ldv _mnem str "gth" jsr explore/match jcn explore/zero
-    ldv _mnem str "lth" jsr explore/match jcn explore/zero
+    ldv _mnem str "equ" jsr match jcn explore/zero
+    ldv _mnem str "neq" jsr match jcn explore/zero
+    ldv _mnem str "gth" jsr match jcn explore/zero
+    ldv _mnem str "lth" jsr match jcn explore/zero
 
-    ldv _mnem str "jmp" jsr explore/match jcn explore/jump
-    ldv _mnem str "jcn" jsr explore/match jcn explore/jump
-    ldv _mnem str "jsr" jsr explore/match jcn explore/jump
-    ldv _mnem str "ret" jsr explore/match jcn explore/zero
+    ldv _mnem str "jmp" jsr match jcn explore/jump
+    ldv _mnem str "jcn" jsr match jcn explore/jump
+    ldv _mnem str "jsr" jsr match jcn explore/jump
+    ldv _mnem str "ret" jsr match jcn explore/zero
 
-    ldv _mnem str "ldv" jsr explore/match jcn explore/one
-    ldv _mnem str "stv" jsr explore/match jcn explore/one
-    ldv _mnem str "lda" jsr explore/match jcn explore/zero
-    ldv _mnem str "sta" jsr explore/match jcn explore/zero
+    ldv _mnem str "ldv" jsr match jcn explore/one
+    ldv _mnem str "stv" jsr match jcn explore/one
+    ldv _mnem str "lda" jsr match jcn explore/zero
+    ldv _mnem str "sta" jsr match jcn explore/zero
 
-    ldv _mnem str "inp" jsr explore/match jcn explore/zero
-    ldv _mnem str "out" jsr explore/match jcn explore/zero
+    ldv _mnem str "inp" jsr match jcn explore/zero
+    ldv _mnem str "out" jsr match jcn explore/zero
 
-    ldv _mnem str "add" jsr explore/match jcn explore/zero
-    ldv _mnem str "sub" jsr explore/match jcn explore/zero
-    ldv _mnem str "mul" jsr explore/match jcn explore/zero
-    ldv _mnem str "div" jsr explore/match jcn explore/zero
-    ldv _mnem str "and" jsr explore/match jcn explore/zero
-    ldv _mnem str "aor" jsr explore/match jcn explore/zero
-    ldv _mnem str "xor" jsr explore/match jcn explore/zero
-    ldv _mnem str "shl" jsr explore/match jcn explore/zero
-    ldv _mnem str "shr" jsr explore/match jcn explore/zero
-    ldv _mnem str "inv" jsr explore/match jcn explore/zero
-    ldv _mnem str "not" jsr explore/match jcn explore/zero
+    ldv _mnem str "add" jsr match jcn explore/zero
+    ldv _mnem str "sub" jsr match jcn explore/zero
+    ldv _mnem str "mul" jsr match jcn explore/zero
+    ldv _mnem str "div" jsr match jcn explore/zero
+    ldv _mnem str "and" jsr match jcn explore/zero
+    ldv _mnem str "aor" jsr match jcn explore/zero
+    ldv _mnem str "xor" jsr match jcn explore/zero
+    ldv _mnem str "shl" jsr match jcn explore/zero
+    ldv _mnem str "shr" jsr match jcn explore/zero
+    ldv _mnem str "inv" jsr match jcn explore/zero
+    ldv _mnem str "not" jsr match jcn explore/zero
 
-    ldv _mnem str "dbg" jsr explore/match jcn explore/zero
+    ldv _mnem str "dbg" jsr match jcn explore/zero
 
-    ldv _mnem str "str" jsr explore/match jcn explore/str
-    ldv _mnem str "lab" jsr explore/match jcn explore/lab
-    ldv _mnem str "var" jsr explore/match jcn explore/var
-    ldv _mnem str "use" jsr explore/match jcn explore/use
+    ldv _mnem str "str" jsr match jcn explore/str
+    ldv _mnem str "lab" jsr match jcn explore/lab
+    ldv _mnem str "var" jsr match jcn explore/var
+    ldv _mnem str "use" jsr match jcn explore/use
 
     ldv _tbuf
     lda
@@ -376,8 +402,10 @@ lab explore/str
 lab explore/use
     jsr token pop ; skip iden
     ldv _file ;save file pointer into outer file
+    dup dbg
         ldv _tbuf
         jsr explore
+    dup dbg
     stv _file ;restore file pointer
     jmp explore/loop
 
@@ -406,7 +434,7 @@ lab explore/lab
         add
     sta
 
-    ldv _addr
+    ldv _hash
     dbg
     ldv _tbuf
     jsr string/print
@@ -448,13 +476,262 @@ lab explore/done
 
 
 ; match mnemonic again token
-lab explore/match
+lab match
     ldv _mnem
     ldv _tbuf
     jsr string/cmp
     ret
 
 
+; (_hash) -- addr
+lab lookup-label
+    lit 0
+    stv _index
+
+    lit 0 ;stack magic :3
+lab lookup-label/loop
+    pop
+    ldv _index
+        dup
+        inc
+        inc
+        stv _index
+    ldv _tabl_lab
+    add
+
+    ; check hash
+    dup
+        lda
+        ldv _hash
+        neq
+        jcn lookup-label/loop
+
+    ;found
+    inc ;address ^= _p + 1
+    lda
+    ret
+
+; (_hash) -- var
+lab lookup-var
+    lit 0
+    stv _index
+
+    lit 0 ;stack magic :3
+lab lookup-var/loop
+    pop
+    ldv _index
+        dup
+        inc
+        inc
+        stv _index
+    ldv _tabl_var
+    add
+
+    ; check hash
+    dup
+        lda
+        ldv _hash
+        neq
+        jcn lookup-var/loop
+
+    ;found
+    inc ;address ^= _p + 1
+    lda
+    ret
+
+
+; byte --
+lab fput
+    ldv _build
+        dup
+        inc
+        stv _build
+    swp
+    jsr sys/disk/write
+    ret
+
+lab fjump
+    jsr token
+    jsr hash
+    jsr lookup-label
+    jsr fput
+    ret
+
+; ( path-str* -- )
+lab assemble
+
+    ;open file (file already checked during exploration)
+    jsr sys/file/seek
+    jsr sys/file/open
+    stv _file
+
+lab assemble/loop
+    jsr token
+    not
+    jcn assemble/done
+
+    ldv _tbuf
+    jsr string/print
+    jsr string/newline
+
+    ldv _mnem str "brk" jsr match jcn assemble/brk
+    ldv _mnem str "inc" jsr match jcn assemble/inc
+    ldv _mnem str "pop" jsr match jcn assemble/pop
+    ldv _mnem str "swp" jsr match jcn assemble/swp
+    ldv _mnem str "dup" jsr match jcn assemble/dup
+    ldv _mnem str "lit" jsr match jcn assemble/lit
+
+    ldv _mnem str "equ" jsr match jcn assemble/equ
+    ldv _mnem str "neq" jsr match jcn assemble/neq
+    ldv _mnem str "gth" jsr match jcn assemble/gth
+    ldv _mnem str "lth" jsr match jcn assemble/lth
+
+    ldv _mnem str "jmp" jsr match jcn assemble/jmp
+    ldv _mnem str "jcn" jsr match jcn assemble/jcn
+    ldv _mnem str "jsr" jsr match jcn assemble/jsr
+    ldv _mnem str "ret" jsr match jcn assemble/ret
+
+    ldv _mnem str "ldv" jsr match jcn assemble/ldv
+    ldv _mnem str "stv" jsr match jcn assemble/stv
+    ldv _mnem str "lda" jsr match jcn assemble/lda
+    ldv _mnem str "sta" jsr match jcn assemble/sta
+
+    ldv _mnem str "inp" jsr match jcn assemble/inp
+    ldv _mnem str "out" jsr match jcn assemble/out
+
+    ldv _mnem str "add" jsr match jcn assemble/add
+    ldv _mnem str "sub" jsr match jcn assemble/sub
+    ldv _mnem str "mul" jsr match jcn assemble/mul
+    ldv _mnem str "div" jsr match jcn assemble/div
+    ldv _mnem str "and" jsr match jcn assemble/and
+    ldv _mnem str "aor" jsr match jcn assemble/aor
+    ldv _mnem str "xor" jsr match jcn assemble/xor
+    ldv _mnem str "shl" jsr match jcn assemble/shl
+    ldv _mnem str "shr" jsr match jcn assemble/shr
+    ldv _mnem str "inv" jsr match jcn assemble/inv
+    ldv _mnem str "not" jsr match jcn assemble/not
+
+    ldv _mnem str "dbg" jsr match jcn assemble/dbg
+
+    ldv _mnem str "str" jsr match jcn assemble/str
+    ldv _mnem str "lab" jsr match jcn assemble/lab
+    ldv _mnem str "var" jsr match jcn assemble/var
+    ldv _mnem str "use" jsr match jcn assemble/use
+
+    ldv _tbuf
+    lda
+    lit 115 ; lowercase s (for system instruction)
+    equ
+    jcn assemble/system
+
+    jmp assemble/loop
+    
+
+lab assemble/brk lit 0 jsr fput jmp assemble/loop    
+lab assemble/inc lit 1 jsr fput jmp assemble/loop    
+lab assemble/pop lit 2 jsr fput jmp assemble/loop    
+lab assemble/swp lit 3 jsr fput jmp assemble/loop    
+lab assemble/dup lit 4 jsr fput jmp assemble/loop    
+lab assemble/lit 
+    lit 5 jsr fput 
+
+    jsr token
+    ldv _tbuf
+    jsr string/to-int
+    jsr fput
+    jmp assemble/loop    
+
+
+lab assemble/equ lit 6 jsr fput jmp assemble/loop    
+lab assemble/neq lit 7 jsr fput jmp assemble/loop    
+lab assemble/gth lit 8 jsr fput jmp assemble/loop    
+lab assemble/lth lit 9 jsr fput jmp assemble/loop    
+
+lab assemble/jmp lit 10 jsr fput jsr fjump jmp assemble/loop
+lab assemble/jcn lit 11 jsr fput jsr fjump jmp assemble/loop
+lab assemble/jsr lit 12 jsr fput jsr fjump jmp assemble/loop
+lab assemble/ret lit 13 jsr fput jmp assemble/loop
+ 
+lab assemble/ldv lit 14 jsr fput  jsr token jsr hash jsr lookup-var jsr fput jmp assemble/loop
+lab assemble/stv lit 15 jsr fput  jsr token jsr hash jsr lookup-var jsr fput jmp assemble/loop
+
+lab assemble/lda lit 16 jsr fput jmp assemble/loop
+lab assemble/sta lit 17 jsr fput jmp assemble/loop
+
+lab assemble/inp lit 18 jsr fput jmp assemble/loop
+lab assemble/out lit 19 jsr fput jmp assemble/loop
+
+lab assemble/add lit 20 jsr fput jmp assemble/loop
+lab assemble/sub lit 21 jsr fput jmp assemble/loop
+lab assemble/mul lit 22 jsr fput jmp assemble/loop
+lab assemble/div lit 23 jsr fput jmp assemble/loop
+
+lab assemble/and lit 24 jsr fput jmp assemble/loop
+lab assemble/aor lit 25 jsr fput jmp assemble/loop
+lab assemble/xor lit 26 jsr fput jmp assemble/loop
+lab assemble/shl lit 27 jsr fput jmp assemble/loop
+lab assemble/shr lit 28 jsr fput jmp assemble/loop
+lab assemble/inv lit 29 jsr fput jmp assemble/loop
+lab assemble/not lit 30 jsr fput jmp assemble/loop
+
+lab assemble/str
+    lit 31 jsr fput
+    jsr token
+    ldv _tbuf
+    stv _index
+
+lab assemble/str/loop
+    ldv _index
+        dup
+        inc
+        stv _index
+    lda
+
+    dup
+        jsr fput
+
+    not
+    jcn assemble/str/loop
+    jmp assemble/loop
+
+lab assemble/dbg
+    lit 32
+    jsr fput
+    jmp assemble/loop
+
+lab assemble/lab jsr token jmp assemble/loop
+lab assemble/var jsr token jmp assemble/loop
+
+lab assemble/system
+        ldv _tbuf
+        inc
+        lda
+        lit 48
+        sub
+    lit 10
+    mul
+        ldv _tbuf
+        inc
+        inc
+        lda
+        lit 48
+        sub
+    add
+    lit 128
+    aor
+    jsr fput
+    jmp assemble/loop
+
+lab assemble/use
+    jsr token pop ; skip iden
+    ldv _file ;save file pointer into outer file
+        ldv _tbuf
+        jsr assemble
+    stv _file ;restore file pointer
+    jmp assemble/loop
+
+lab assemble/done 
+    ret
 
 
 lab file-not-exist-error
@@ -475,6 +752,13 @@ lab no-file-error
     jsr string/newline
     brk
     
+lab no-build-error
+    lit _tbuf
+    str "assembler error: no build name provided"
+    lit _tbuf
+    jsr string/print
+    jsr string/newline
+    brk
 
 
 
