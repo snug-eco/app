@@ -92,6 +92,7 @@ lab main
     ldv _buildname
     ldv _addr
     jsr sys/file/create
+    jsr sys/file/open
     stv _build
 
     jsr assemble
