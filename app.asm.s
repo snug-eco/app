@@ -555,7 +555,11 @@ lab fjump
     jsr token
     jsr hash
     jsr lookup-label
-    jsr fput
+    dup 
+        jsr fput ;low byte
+    lit 8
+    shr
+        jsr fput ;high byte
     ret
 
 ; ( path-str* -- )
