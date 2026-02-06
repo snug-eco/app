@@ -695,7 +695,6 @@ lab assemble/str/loop
     dup
         jsr fput
 
-    not
     jcn assemble/str/loop
     jmp assemble/loop
 
