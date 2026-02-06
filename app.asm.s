@@ -97,6 +97,7 @@ lab main
 
     jsr assemble
 
+    jsr sys/flush-disk-cache
     brk
 
 
